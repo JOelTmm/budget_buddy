@@ -1,6 +1,0 @@
-flask
-flask-sqlalchemy
-mysql-connector-python
-flask-bcrypt
-pyjwt
-flask-jwt-extended
