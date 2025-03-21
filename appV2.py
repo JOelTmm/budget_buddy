@@ -35,6 +35,25 @@ def token_required(func):
         return func(current_id, role, *args, **kwargs)
     return wrapper
 
+def list_accounts(token):
+    result, status = token_required(lambda current_id, role: (
+        {'accounts': [{'id': acc.id, 'name': acc.account_name, 'balance': float(acc.balance)} for acc in Account.query.filter_by(user_id=current_id).all()]}, 200
+    ))(token)
+    return result, status
+
+def get_account_id_from_choice(token, choice):
+    accounts_result, status = list_accounts(token)
+    accounts = accounts_result['accounts']
+    if not accounts:
+        return None, "No accounts available"
+    try:
+        choice = int(choice) - 1  # Convertir en index (1-based -> 0-based)
+        if 0 <= choice < len(accounts):
+            return accounts[choice]['id'], None
+        return None, "Invalid choice"
+    except ValueError:
+        return None, "Choice must be a number"
+
 # Fonctions métier
 def register_user(last_name, first_name, email, password):
     if not validate_password(password):
@@ -66,6 +85,19 @@ def create_account_with_id(current_id, account_name):
     return {'message': 'Account created', 'id': account.id}, 201
 
 def add_transaction(token, account_id, reference, description, amount, transaction_type, category, destination_account_id=None):
+    accounts_result, _ = list_accounts(token)
+    if not any(acc['id'] == int(account_id) for acc in accounts_result['accounts']):
+        return {'error': 'Invalid account ID'}, 400
+    try:
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            return {'error': 'Amount must be positive'}, 400
+    except ValueError:
+        return {'error': 'Invalid amount format'}, 400
+    
+    if transaction_type == 'transfer' and (not destination_account_id or not any(acc['id'] == int(destination_account_id) for acc in accounts_result['accounts'])):
+        return {'error': 'Invalid destination account ID'}, 400
+    
     result, status = token_required(lambda current_id, role: (
         execute_transaction(current_id, role, account_id, reference, description, amount, transaction_type, category, destination_account_id)
     ))(token)
@@ -76,7 +108,6 @@ def execute_transaction(current_id, role, account_id, reference, description, am
     if not account or (role == 'user' and account.user_id != current_id):
         return {'error': 'Account not found or unauthorized'}, 404
     
-    amount = Decimal(str(amount))
     if transaction_type == 'deposit':
         new_balance = account.balance + amount
     elif transaction_type == 'withdrawal':
@@ -114,20 +145,20 @@ def execute_transaction(current_id, role, account_id, reference, description, am
     return {'message': f'{transaction_type.capitalize()} successful', 'balance': float(account.balance)}, 201
 
 def get_transactions(token, account_id, type_filter=None, category=None, start_date=None, end_date=None, sort=None):
+    accounts_result, _ = list_accounts(token)
+    if not any(acc['id'] == int(account_id) for acc in accounts_result['accounts']):
+        return {'error': 'Invalid account ID'}, 400
     result, status = token_required(lambda current_id, role: (
         execute_get_transactions(current_id, role, account_id, type_filter, category, start_date, end_date, sort)
     ))(token)
     return result, status
 
 def execute_get_transactions(current_id, role, account_id, type_filter, category, start_date, end_date, sort):
-    if not account_id:
-        return {'error': 'account_id is required'}, 400
-    if role == 'user':
-        account = db.session.get(Account, account_id)
-        if not account or account.user_id != current_id:
-            return {'error': 'Account not found or unauthorized'}, 404
+    account = db.session.get(Account, account_id)
+    if not account or (role == 'user' and account.user_id != current_id):
+        return {'error': 'Account not found or unauthorized'}, 404
     
-    query = Transaction.query.filter_by(account_id=account_id) if role == 'user' else Transaction.query
+    query = Transaction.query.filter_by(account_id=account_id)
     if type_filter:
         query = query.filter_by(transaction_type=type_filter)
     if category:
@@ -197,6 +228,9 @@ def execute_dashboard(current_id, role, period):
     }, 200
 
 def get_balance(token, account_id):
+    accounts_result, _ = list_accounts(token)
+    if not any(acc['id'] == int(account_id) for acc in accounts_result['accounts']):
+        return {'error': 'Invalid account ID'}, 400
     result, status = token_required(lambda current_id, role: (
         execute_get_balance(current_id, role, account_id)
     ))(token)
@@ -207,12 +241,6 @@ def execute_get_balance(current_id, role, account_id):
     if not account or (role == 'user' and account.user_id != current_id):
         return {'error': 'Account not found or unauthorized'}, 404
     return {'account_id': account.id, 'name': account.account_name, 'balance': float(account.balance)}, 200
-
-def list_accounts(token):
-    result, status = token_required(lambda current_id, role: (
-        {'accounts': [{'id': acc.id, 'name': acc.account_name, 'balance': float(acc.balance)} for acc in Account.query.filter_by(user_id=current_id).all()]}, 200
-    ))(token)
-    return result, status
 
 # Interface console
 def main():
@@ -244,9 +272,9 @@ def main():
                 password = input("Password: ")
                 result, status = login_user(email, password)
                 if status == 200:
-                    token = result['token']  # Stocke le token sans l'afficher
+                    token = result['token']
                     print("[200] Login successful")
-                    logged_in_menu(token)  # Passe au menu connecté
+                    logged_in_menu(token)
                 else:
                     print(f"[{status}] {result}")
             else:
@@ -259,30 +287,44 @@ def logged_in_menu(token):
         print("2. Make a Transaction")
         print("3. View Dashboard")
         print("4. Create a New Account")
-        print("5. Logout")
-        choice = input("Choose an option (1-5): ").strip()
+        print("5. View Transaction History")
+        print("6. Logout")
+        choice = input("Choose an option (1-6): ").strip()
 
-        # Lister les comptes avant chaque action nécessitant un account_id
         accounts_result, status = list_accounts(token)
         if status == 200 and accounts_result['accounts']:
             print("\nYour Accounts:")
-            for acc in accounts_result['accounts']:
-                print(f"ID: {acc['id']}, Name: {acc['name']}, Balance: {acc['balance']}")
+            for i, acc in enumerate(accounts_result['accounts'], 1):
+                print(f"{i}. ID: {acc['id']}, Name: {acc['name']}, Balance: {acc['balance']}")
         else:
             print("\nNo accounts found. Create one first!")
 
         if choice == '1':
-            account_id = input("Account ID: ")
+            account_choice = input("Select account number (e.g., 1, 2): ")
+            account_id, error = get_account_id_from_choice(token, account_choice)
+            if error:
+                print(f"Error: {error}")
+                continue
             result, status = get_balance(token, account_id)
             print(f"[{status}] {result}")
         elif choice == '2':
             transaction_type = input("Transaction type (deposit/withdrawal/transfer): ").lower()
-            account_id = input("Account ID: ")
+            account_choice = input("Select source account number (e.g., 1, 2): ")
+            account_id, error = get_account_id_from_choice(token, account_choice)
+            if error:
+                print(f"Error: {error}")
+                continue
             reference = input("Reference: ")
             description = input("Description: ")
             amount = input("Amount: ")
             category = input("Category: ")
-            dest_account_id = input("Destination Account ID (for transfer, otherwise leave blank): ") or None
+            dest_account_id = None
+            if transaction_type == 'transfer':
+                dest_choice = input("Select destination account number (e.g., 1, 2): ")
+                dest_account_id, error = get_account_id_from_choice(token, dest_choice)
+                if error:
+                    print(f"Error: {error}")
+                    continue
             result, status = add_transaction(token, account_id, reference, description, amount, transaction_type, category, dest_account_id)
             print(f"[{status}] {result}")
         elif choice == '3':
@@ -294,10 +336,18 @@ def logged_in_menu(token):
             result, status = create_account(token, account_name)
             print(f"[{status}] {result}")
         elif choice == '5':
+            account_choice = input("Select account number (e.g., 1, 2): ")
+            account_id, error = get_account_id_from_choice(token, account_choice)
+            if error:
+                print(f"Error: {error}")
+                continue
+            result, status = get_transactions(token, account_id)
+            print(f"[{status}] {result}")
+        elif choice == '6':
             print("Logged out successfully")
             break
         else:
-            print("Invalid choice. Please select 1, 2, 3, 4, or 5.")
+            print("Invalid choice. Please select 1, 2, 3, 4, 5, or 6.")
 
 if __name__ == '__main__':
     main()
