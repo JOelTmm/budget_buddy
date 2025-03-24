@@ -29,11 +29,12 @@ class BankingApp(CTk):
         self.current_id = None
         self.all_accounts = []
         self.clients = []
-        self.currencies = {"EUR": 1.0, "USD": None, "GBP": None}  # Taux de change dynamiques
-        self.selected_currency = "EUR"  # Devise par défaut
+        self.currencies = {"€": 1.0, "$": None, "£": None}  # Taux de change dynamiques avec symboles
+        self.selected_currency = "€"  # Devise par défaut
         self.languages = {
             "en": {"welcome": "Welcome to Revolut", "login": "Login", "register_user": "Register as User", "register_banker": "Register as Banker", "logout": "Logout", "new_account": "New Account", "new_transaction": "New Transaction", "overview": "Overview", "exit": "Exit"},
-            "fr": {"welcome": "Bienvenue chez Revolut", "login": "Connexion", "register_user": "S'inscrire en tant qu'utilisateur", "register_banker": "S'inscrire en tant que banquier", "logout": "Déconnexion", "new_account": "Nouveau compte", "new_transaction": "Nouvelle transaction", "overview": "Vue d'ensemble", "exit": "Quitter"}
+            "fr": {"welcome": "Bienvenue chez Revolut", "login": "Connexion", "register_user": "S'inscrire en tant qu'utilisateur", "register_banker": "S'inscrire en tant que banquier", "logout": "Déconnexion", "new_account": "Nouveau compte", "new_transaction": "Nouvelle transaction", "overview": "Vue d'ensemble", "exit": "Quitter"},
+            "es": {"welcome": "Bienvenido a Revolut", "login": "Iniciar sesión", "register_user": "Registrarse como usuario", "register_banker": "Registrarse como banquero", "logout": "Cerrar sesión", "new_account": "Nueva cuenta", "new_transaction": "Nueva transacción", "overview": "Resumen", "exit": "Salir"}
         }
         self.current_language = "en"  # Langue par défaut
         self.custom_categories = ["Leisure", "Meal", "Bribe", "Income", "Other"]  # Catégories personnalisables
@@ -47,11 +48,11 @@ class BankingApp(CTk):
         try:
             response = requests.get("https://api.exchangerate-api.com/v4/latest/EUR")
             data = response.json()
-            self.currencies["USD"] = data["rates"]["USD"]
-            self.currencies["GBP"] = data["rates"]["GBP"]
+            self.currencies["$"] = data["rates"]["USD"]
+            self.currencies["£"] = data["rates"]["GBP"]
         except:
-            self.currencies["USD"] = 1.1  # Valeurs par défaut en cas d'échec
-            self.currencies["GBP"] = 0.85
+            self.currencies["$"] = 1.1  # Valeurs par défaut en cas d'échec
+            self.currencies["£"] = 0.85
 
     def toggle_theme(self):
         self.theme = "light" if self.theme == "dark" else "dark"
@@ -96,7 +97,7 @@ class BankingApp(CTk):
         self.register_banker_button = CTkButton(self.welcome_frame, text=self.languages[self.current_language]["register_banker"], command=self.show_banker_register_screen, corner_radius=25, fg_color="#FFFFFF", text_color="#0A1F44", hover_color="#E0E0E0", font=("Helvetica", 16, "bold"), width=200)
         self.register_banker_button.pack(pady=20)
         CTkSwitch(self.welcome_frame, text="Dark/Light Theme", command=self.toggle_theme, fg_color="#FFFFFF", text_color="#FFFFFF").pack(pady=10)
-        self.language_combo = CTkComboBox(self.welcome_frame, values=["en", "fr"], command=self.change_language, fg_color="#1E3A8A", text_color="#FFFFFF", width=100)
+        self.language_combo = CTkComboBox(self.welcome_frame, values=["en", "fr", "es"], command=self.change_language, fg_color="#1E3A8A", text_color="#FFFFFF", width=100)
         self.language_combo.pack(pady=10)
         self.exit_button = CTkButton(self.welcome_frame, text=self.languages[self.current_language]["exit"], command=self.quit_app, corner_radius=25, fg_color="#FF5252", text_color="#FFFFFF", font=("Helvetica", 16, "bold"), width=200)
         self.exit_button.pack(pady=20)
@@ -150,7 +151,7 @@ class BankingApp(CTk):
         header_frame = CTkFrame(self.main_frame, corner_radius=0, fg_color="#142C6B")
         header_frame.pack(fill="x")
         CTkLabel(header_frame, text="Revolut", font=("Helvetica", 20, "bold"), text_color="#FFFFFF").pack(side="left", padx=10, pady=10)
-        self.balance_label = CTkLabel(header_frame, text="0.00 €", font=("Helvetica", 24, "bold"), text_color="#00C853")
+        self.balance_label = CTkLabel(header_frame, text=f"0.00 {self.selected_currency}", font=("Helvetica", 24, "bold"), text_color="#00C853")
         self.balance_label.pack(side="right", padx=10, pady=10)
         self.logout_button = CTkButton(header_frame, text=self.languages[self.current_language]["logout"], command=self.logout, corner_radius=10, fg_color="#FFFFFF", text_color="#0A1F44", width=100)
         self.logout_button.pack(side="right", padx=10, pady=10)
@@ -304,7 +305,7 @@ class BankingApp(CTk):
         self.load_transactions()
 
     def convert_amount(self, amount):
-        return amount * self.currencies[self.selected_currency] / self.currencies["EUR"]
+        return amount * self.currencies[self.selected_currency] / self.currencies["€"]
 
     def load_accounts(self):
         for widget in self.accounts_frame.winfo_children():
@@ -319,13 +320,13 @@ class BankingApp(CTk):
                     CTkLabel(frame, text=account['name'], font=("Helvetica", 14, "bold"), text_color="#FFFFFF").pack(pady=5)
                     converted_balance = self.convert_amount(account['balance'])
                     alert_text = " (Overdraft)" if converted_balance < 0 else " (Low Balance)" if converted_balance < 100 else ""
-                    CTkLabel(frame, text=f"{converted_balance:.2f} {self.selected_currency}{alert_text}", font=("Helvetica", 18), text_color="#FF5252" if alert_text else "#00C853").pack(pady=5)
+                    CTkLabel(frame, text=f"{converted_balance:.2f}{self.selected_currency}{alert_text}", font=("Helvetica", 18), text_color="#FF5252" if alert_text else "#00C853").pack(pady=5)
             else:
                 CTkLabel(self.accounts_frame, text="Error loading accounts.", font=("Helvetica", 14), text_color="#FF5252").pack(pady=10)
 
     def update_balance(self):
         total_balance = sum(self.convert_amount(acc['balance']) for acc in self.accounts)
-        self.balance_label.configure(text=f"{total_balance:.2f} {self.selected_currency}")
+        self.balance_label.configure(text=f"{total_balance:.2f}{self.selected_currency}")
 
     def load_transactions(self, start_date=None, end_date=None, category_filter="All", type_filter="All", sort_filter=None):
         for widget in self.transaction_frame.winfo_children():
@@ -362,7 +363,7 @@ class BankingApp(CTk):
             CTkLabel(frame, text=t['description'], font=("Helvetica", 14), text_color="#FFFFFF").pack(side="left", padx=10)
             converted_amount = self.convert_amount(float(t['amount']))
             amount_str = f"+{converted_amount:.2f}" if t['type'] == 'deposit' else f"-{converted_amount:.2f}"
-            CTkLabel(frame, text=amount_str + f" {self.selected_currency}", font=("Helvetica", 14, "bold"), text_color="#00C853" if t['type'] == 'deposit' else "#FF5252").pack(side="right", padx=10)
+            CTkLabel(frame, text=f"{amount_str}{self.selected_currency}", font=("Helvetica", 14, "bold"), text_color="#00C853" if t['type'] == 'deposit' else "#FF5252").pack(side="right", padx=10)
             CTkLabel(frame, text=t['date'].split('T')[0], font=("Helvetica", 12), text_color="#B0C4DE").pack(side="right", padx=10)
             row += 1
 
@@ -448,7 +449,7 @@ class BankingApp(CTk):
             tk.messagebox.showerror("Error", "Please fill in all mandatory fields.")
             return
         try:
-            amount = float(amount) * self.currencies["EUR"] / self.currencies[self.selected_currency]  # Conversion en EUR pour la DB
+            amount = float(amount) * self.currencies["€"] / self.currencies[self.selected_currency]  # Conversion en € pour la DB
         except ValueError:
             tk.messagebox.showerror("Error", "Amount must be a valid number.")
             return
@@ -462,9 +463,9 @@ class BankingApp(CTk):
                 for acc in self.accounts:
                     converted_balance = self.convert_amount(acc['balance'])
                     if converted_balance < 0:
-                        self.show_dynamic_alert(f"Overdraft Alert: {acc['name']} is now at {converted_balance:.2f} {self.selected_currency}")
+                        self.show_dynamic_alert(f"Overdraft Alert: {acc['name']} is now at {converted_balance:.2f}{self.selected_currency}")
                     elif converted_balance < 100:
-                        self.show_dynamic_alert(f"Low Balance Warning: {acc['name']} is at {converted_balance:.2f} {self.selected_currency}")
+                        self.show_dynamic_alert(f"Low Balance Warning: {acc['name']} is at {converted_balance:.2f}{self.selected_currency}")
             else:
                 tk.messagebox.showerror("Error", result.get('error', 'Unknown error'))
 
@@ -564,11 +565,11 @@ class BankingApp(CTk):
         summary_frame = CTkFrame(self.overview_frame, corner_radius=10, fg_color="#1E3A8A")
         summary_frame.pack(pady=10, padx=20, fill="x")
         total_balance = sum(self.convert_amount(acc['balance']) for acc in self.accounts)
-        CTkLabel(summary_frame, text=f"Total Balance: {total_balance:.2f} {self.selected_currency}", font=("Helvetica", 16, "bold"), text_color="#00C853").pack(pady=5)
+        CTkLabel(summary_frame, text=f"Total Balance: {total_balance:.2f}{self.selected_currency}", font=("Helvetica", 16, "bold"), text_color="#00C853").pack(pady=5)
         monthly_expenses = self.calculate_monthly_expenses()
         for month, amount in monthly_expenses.items():
             converted_amount = self.convert_amount(amount)
-            CTkLabel(summary_frame, text=f"{month}: -{converted_amount:.2f} {self.selected_currency}", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
+            CTkLabel(summary_frame, text=f"{month}: -{converted_amount:.2f}{self.selected_currency}", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
 
         alerts_frame = CTkFrame(self.overview_frame, corner_radius=10, fg_color="#1E3A8A")
         alerts_frame.pack(pady=10, padx=20, fill="x")
@@ -576,9 +577,9 @@ class BankingApp(CTk):
         for acc in self.accounts:
             converted_balance = self.convert_amount(acc['balance'])
             if converted_balance < 0:
-                CTkLabel(alerts_frame, text=f"Overdraft Alert: {acc['name']} ({converted_balance:.2f} {self.selected_currency})", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
+                CTkLabel(alerts_frame, text=f"Overdraft Alert: {acc['name']} ({converted_balance:.2f}{self.selected_currency})", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
             elif converted_balance < 100:
-                CTkLabel(alerts_frame, text=f"Low Balance Warning: {acc['name']} ({converted_balance:.2f} {self.selected_currency})", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
+                CTkLabel(alerts_frame, text=f"Low Balance Warning: {acc['name']} ({converted_balance:.2f}{self.selected_currency})", font=("Helvetica", 14), text_color="#FF5252").pack(pady=2)
 
         CTkButton(self.overview_frame, text="Show Chart", command=self.show_graph, corner_radius=10, fg_color="#FFFFFF", text_color="#0A1F44", width=150).pack(pady=10)
 
@@ -659,7 +660,7 @@ class BankingApp(CTk):
         for i, acc in enumerate(client_accounts):
             converted_balance = self.convert_amount(acc['balance'])
             alert_text = " (Overdraft)" if converted_balance < 0 else " (Low Balance)" if converted_balance < 100 else ""
-            CTkLabel(accounts_frame, text=f"Account Name: {acc['name']} - Balance: {converted_balance:.2f} {self.selected_currency}{alert_text}", font=("Helvetica", 12), text_color="#FF5252" if alert_text else "#FFFFFF").grid(row=i, column=0, padx=5, pady=2)
+            CTkLabel(accounts_frame, text=f"Account Name: {acc['name']} - Balance: {converted_balance:.2f}{self.selected_currency}{alert_text}", font=("Helvetica", 12), text_color="#FF5252" if alert_text else "#FFFFFF").grid(row=i, column=0, padx=5, pady=2)
 
         transactions_label = CTkLabel(frame, text="Transactions:", font=("Helvetica", 16, "bold"), text_color="#FFFFFF")
         transactions_label.pack(pady=5)
@@ -673,7 +674,7 @@ class BankingApp(CTk):
                     frame_t = CTkFrame(transactions_frame, corner_radius=5, fg_color="#0A1F44")
                     frame_t.grid(row=row, column=0, sticky="ew", padx=5, pady=2)
                     converted_amount = self.convert_amount(float(t['amount']))
-                    CTkLabel(frame_t, text=f"{t['description']} - {converted_amount:.2f} {self.selected_currency}", font=("Helvetica", 12), text_color="#FFFFFF").pack(side="left", padx=5)
+                    CTkLabel(frame_t, text=f"{t['description']} - {converted_amount:.2f}{self.selected_currency}", font=("Helvetica", 12), text_color="#FFFFFF").pack(side="left", padx=5)
                     CTkButton(frame_t, text="Edit", command=lambda t=t: self.edit_transaction(t), corner_radius=5, fg_color="#FFFFFF", text_color="#0A1F44", width=50).pack(side="right", padx=5)
                     row += 1
 
@@ -732,7 +733,7 @@ class BankingApp(CTk):
             tk.messagebox.showerror("Error", "Please fill in all mandatory fields.")
             return
         try:
-            amount = float(amount) * self.currencies["EUR"] / self.currencies[self.selected_currency]
+            amount = float(amount) * self.currencies["€"] / self.currencies[self.selected_currency]
         except ValueError:
             tk.messagebox.showerror("Error", "Amount must be a valid number.")
             return
@@ -767,7 +768,7 @@ class BankingApp(CTk):
         new_desc = self.edit_desc_entry.get()
         new_amount = self.edit_amount_entry.get()
         try:
-            new_amount = float(new_amount) * self.currencies["EUR"] / self.currencies[self.selected_currency]
+            new_amount = float(new_amount) * self.currencies["€"] / self.currencies[self.selected_currency]
         except ValueError:
             tk.messagebox.showerror("Error", "Amount must be a valid number.")
             return
@@ -822,7 +823,7 @@ class BankingApp(CTk):
             CTkLabel(frame, text=f"{transaction['description']} (Account {transaction['account_id']})", font=("Helvetica", 14), text_color="#FFFFFF").pack(side="left", padx=10)
             converted_amount = self.convert_amount(float(transaction['amount']))
             amount_str = f"+{converted_amount:.2f}" if transaction['type'] == 'deposit' else f"-{converted_amount:.2f}"
-            CTkLabel(frame, text=amount_str + f" {self.selected_currency}", font=("Helvetica", 14, "bold"), text_color="#00C853" if transaction['type'] == 'deposit' else "#FF5252").pack(side="right", padx=10)
+            CTkLabel(frame, text=f"{amount_str}{self.selected_currency}", font=("Helvetica", 14, "bold"), text_color="#00C853" if transaction['type'] == 'deposit' else "#FF5252").pack(side="right", padx=10)
             CTkLabel(frame, text=transaction['date'].split('T')[0], font=("Helvetica", 12), text_color="#B0C4DE").pack(side="right", padx=10)
 
     def add_client_window(self):
