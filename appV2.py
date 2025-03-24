@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import re
 from decimal import Decimal
 from flask import jsonify
+from sqlalchemy import func
 
 # Initialisation de Flask
 app = Flask(__name__)
@@ -183,9 +184,9 @@ def execute_get_transactions(current_id, role, account_id, type_filter, category
     if category:
         query = query.filter_by(category=category)
     if start_date:
-        query = query.filter(Transaction.transaction_date >= start_date)
+        query = query.filter(func.date(Transaction.transaction_date) >= start_date)
     if end_date:
-        query = query.filter(Transaction.transaction_date <= end_date)
+        query = query.filter(func.date(Transaction.transaction_date) <= end_date)
     if sort:
         query = query.order_by(Transaction.amount.asc() if sort == 'asc' else Transaction.amount.desc())
 

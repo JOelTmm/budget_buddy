@@ -17,7 +17,7 @@ import sys
 class BankingApp(CTk):
     def __init__(self):
         super().__init__()
-        self.title("Revolut")
+        self.title("Budget Buddy")
         self.geometry("1000x700")
         self.theme = "dark"  # Thème par défaut
         self.fg_color_dark = "#0A1F44"
@@ -159,14 +159,15 @@ class BankingApp(CTk):
         self.currency_combo.pack(side="right", padx=10, pady=10)
         self.accounts_frame = CTkScrollableFrame(self.main_frame, width=960, height=150, corner_radius=0, fg_color=self.fg_color_dark, orientation="horizontal")
         self.accounts_frame.pack(pady=10, padx=20, fill="x")
+        filter_frame = CTkFrame(self.main_frame, fg_color=self.fg_color_dark)
+        filter_frame.pack(fill="x", pady=5)
         self.transaction_frame = CTkScrollableFrame(self.main_frame, width=960, height=350, corner_radius=0, fg_color=self.fg_color_dark)
         self.transaction_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
-        filter_frame = CTkFrame(self.main_frame, fg_color=self.fg_color_dark)
-        filter_frame.pack(fill="x", pady=5)
-        self.start_date_filter = DateEntry(filter_frame, width=150, background="#1E3A8A", foreground="#FFFFFF", borderwidth=2, date_pattern="yyyy-mm-dd")
+        
+        self.start_date_filter = DateEntry(filter_frame, width=30, background="#1E3A8A", foreground="#FFFFFF", borderwidth=2, date_pattern="yyyy-mm-dd")
         self.start_date_filter.pack(side="left", padx=5)
-        self.end_date_filter = DateEntry(filter_frame, width=150, background="#1E3A8A", foreground="#FFFFFF", borderwidth=2, date_pattern="yyyy-mm-dd")
+        self.end_date_filter = DateEntry(filter_frame, width=30, background="#1E3A8A", foreground="#FFFFFF", borderwidth=2, date_pattern="yyyy-mm-dd")
         self.end_date_filter.pack(side="left", padx=5)
         self.category_filter = CTkComboBox(filter_frame, values=["All"] + self.custom_categories, fg_color="#1E3A8A", text_color="#FFFFFF", width=150)
         self.category_filter.pack(side="left", padx=5)
@@ -359,7 +360,7 @@ class BankingApp(CTk):
         row = 0
         for t in filtered_transactions:
             frame = CTkFrame(self.transaction_frame, corner_radius=10, fg_color="#1E3A8A")
-            frame.grid(row=row, column=0, sticky="ew", padx=5, pady=5)
+            frame.grid(row=row, column=1, sticky="ew", padx=5, pady=5)
             CTkLabel(frame, text=t['description'], font=("Helvetica", 14), text_color="#FFFFFF").pack(side="left", padx=10)
             converted_amount = self.convert_amount(float(t['amount']))
             amount_str = f"+{converted_amount:.2f}" if t['type'] == 'deposit' else f"-{converted_amount:.2f}"
