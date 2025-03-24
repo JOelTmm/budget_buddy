@@ -406,7 +406,7 @@ class BankingApp(CTk):
     def open_transaction_window(self):
         self.transaction_window = ctk.CTkToplevel(self)
         self.transaction_window.title("New Transaction")
-        self.transaction_window.geometry("400x450")
+        self.transaction_window.geometry("400x500")
         self.transaction_window.configure(fg_color=self.fg_color_dark if self.theme == "dark" else self.fg_color_light)
         self.fade_in(self.transaction_window)
         frame = CTkFrame(self.transaction_window, corner_radius=10, fg_color="#142C6B" if self.theme == "dark" else "#D1E8FF")
@@ -414,7 +414,7 @@ class BankingApp(CTk):
         CTkLabel(frame, text="Add a Transaction", font=("Helvetica", 18, "bold"), text_color="#FFFFFF").pack(pady=10)
         self.account_combo = CTkComboBox(frame, values=[acc['name'] for acc in self.accounts], fg_color="#1E3A8A", text_color="#FFFFFF")
         self.account_combo.pack(pady=10)
-        self.transaction_type = CTkComboBox(frame, values=["deposit", "withdrawal", "transfer"], fg_color="#1E3A8A", text_color="#FFFFFF", command=self.toggle_transaction_fields)
+        self.transaction_type = CTkComboBox(frame, values=["deposit", "withdrawal", "transfert"], fg_color="#1E3A8A", text_color="#FFFFFF", command=self.toggle_transaction_fields)
         self.transaction_type.pack(pady=10)
         self.description_entry = CTkEntry(frame, placeholder_text="Description", width=250, corner_radius=8, fg_color="#1E3A8A", text_color="#FFFFFF")
         self.description_entry.pack(pady=10)
