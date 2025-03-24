@@ -32,9 +32,9 @@ class BankingApp(CTk):
         self.currencies = {"€": 1.0, "$": None, "£": None}  # Taux de change dynamiques avec symboles
         self.selected_currency = "€"  # Devise par défaut
         self.languages = {
-            "en": {"welcome": "Welcome to Revolut", "login": "Login", "register_user": "Register as User", "register_banker": "Register as Banker", "logout": "Logout", "new_account": "New Account", "new_transaction": "New Transaction", "overview": "Overview", "exit": "Exit"},
-            "fr": {"welcome": "Bienvenue chez Revolut", "login": "Connexion", "register_user": "S'inscrire en tant qu'utilisateur", "register_banker": "S'inscrire en tant que banquier", "logout": "Déconnexion", "new_account": "Nouveau compte", "new_transaction": "Nouvelle transaction", "overview": "Vue d'ensemble", "exit": "Quitter"},
-            "es": {"welcome": "Bienvenido a Revolut", "login": "Iniciar sesión", "register_user": "Registrarse como usuario", "register_banker": "Registrarse como banquero", "logout": "Cerrar sesión", "new_account": "Nueva cuenta", "new_transaction": "Nueva transacción", "overview": "Resumen", "exit": "Salir"}
+            "en": {"welcome": "Welcome to Budget Buddy", "login": "Login", "register_user": "Register as User", "register_banker": "Register as Banker", "logout": "Logout", "new_account": "New Account", "new_transaction": "New Transaction", "overview": "Overview", "exit": "Exit"},
+            "fr": {"welcome": "Bienvenue chez Budget Buddy", "login": "Connexion", "register_user": "S'inscrire en tant qu'utilisateur", "register_banker": "S'inscrire en tant que banquier", "logout": "Déconnexion", "new_account": "Nouveau compte", "new_transaction": "Nouvelle transaction", "overview": "Vue d'ensemble", "exit": "Quitter"},
+            "es": {"welcome": "Bienvenido a Budget Buddy", "login": "Iniciar sesión", "register_user": "Registrarse como usuario", "register_banker": "Registrarse como banquero", "logout": "Cerrar sesión", "new_account": "Nueva cuenta", "new_transaction": "Nueva transacción", "overview": "Resumen", "exit": "Salir"}
         }
         self.current_language = "en"  # Langue par défaut
         self.custom_categories = ["Leisure", "Meal", "Bribe", "Income", "Other"]  # Catégories personnalisables
@@ -150,7 +150,7 @@ class BankingApp(CTk):
         self.main_frame.pack_forget()
         header_frame = CTkFrame(self.main_frame, corner_radius=0, fg_color="#142C6B")
         header_frame.pack(fill="x")
-        CTkLabel(header_frame, text="Revolut", font=("Helvetica", 20, "bold"), text_color="#FFFFFF").pack(side="left", padx=10, pady=10)
+        CTkLabel(header_frame, text="Budget Buddy", font=("Helvetica", 20, "bold"), text_color="#FFFFFF").pack(side="left", padx=10, pady=10)
         self.balance_label = CTkLabel(header_frame, text=f"0.00 {self.selected_currency}", font=("Helvetica", 24, "bold"), text_color="#00C853")
         self.balance_label.pack(side="right", padx=10, pady=10)
         self.logout_button = CTkButton(header_frame, text=self.languages[self.current_language]["logout"], command=self.logout, corner_radius=10, fg_color="#FFFFFF", text_color="#0A1F44", width=100)
