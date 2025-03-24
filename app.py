@@ -173,18 +173,13 @@ def add_transaction(current_id, role):
 @token_required
 def transaction_history(current_id, role):
     account_id = request.args.get('account_id')
-    if not account_id:
-        return jsonify({'error': 'account_id is required'}), 400
-    
     if role == 'user':
-        account = db.session.get(Account, account_id)
-        if not account or account.user_id != current_id:
+        account = Account.query.filter_by(id=account_id, user_id=current_id).first()
+        if not account:
             return jsonify({'error': 'Account not found or unauthorized'}), 404
-    
-    # Construire la requête
     query = Transaction.query.filter_by(account_id=account_id) if role == 'user' else Transaction.query
 
-    # Appliquer les filtres
+    # Filtres
     if 'type' in request.args:
         query = query.filter_by(transaction_type=request.args['type'])
     if 'category' in request.args:
@@ -196,10 +191,7 @@ def transaction_history(current_id, role):
     if 'sort' in request.args:
         query = query.order_by(Transaction.amount.asc() if request.args['sort'] == 'asc' else Transaction.amount.desc())
 
-    # Récupérer les transactions
     transactions = query.all()
-    
-    # Formater la réponse
     return jsonify([{
         'id': t.id,
         'reference': t.reference,
@@ -207,9 +199,8 @@ def transaction_history(current_id, role):
         'amount': float(t.amount),
         'date': t.transaction_date.isoformat(),
         'type': t.transaction_type,
-        'category': t.category,
-        'destination_account_id': t.destination_account_id if t.transaction_type == 'transfer' else None
-    } for t in transactions]), 200
+        'category': t.category
+    } for t in transactions])
 
 # Route pour le tableau de bord
 

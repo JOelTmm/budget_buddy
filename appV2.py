@@ -10,6 +10,7 @@ import jwt
 from datetime import datetime, timedelta
 import re
 from decimal import Decimal
+from flask import jsonify
 
 # Initialisation de Flask
 app = Flask(__name__)
@@ -34,7 +35,12 @@ def token_required(func):
             return {'error': f'Invalid token: {str(e)}'}, 401
         return func(current_id, role, *args, **kwargs)
     return wrapper
+# appV2.py
 
+@token_required
+def get_all_accounts(token):
+    accounts = Account.query.all()
+    return jsonify([{'id': acc.id, 'name': acc.name, 'balance': acc.balance, 'user_id': acc.user_id} for acc in accounts]), 200
 def list_accounts(token):
     result, status = token_required(lambda current_id, role: (
         {'accounts': [{'id': acc.id, 'name': acc.account_name, 'balance': float(acc.balance)} for acc in Account.query.filter_by(user_id=current_id).all()]}, 200
@@ -63,11 +69,24 @@ def register_user(last_name, first_name, email, password):
     db.session.add(user)
     db.session.commit()
     return {'message': 'User created', 'id': user.id}, 201
-
+def register_banker(last_name, first_name, email, password):
+    if not validate_password(password):
+        return {'error': 'Password must be at least 10 characters with 1 uppercase, 1 lowercase, 1 digit, and 1 special character'}, 400
+    if Banker.query.filter_by(email=email).first():
+        return {'error': 'Email already exists'}, 400
+    hashed_pwd = bcrypt.generate_password_hash(password).decode('utf-8')
+    banker = Banker(last_name=last_name, first_name=first_name, email=email, password=hashed_pwd)
+    db.session.add(banker)
+    db.session.commit()
+    return {'message': 'Banker created', 'id': banker.id}, 201
 def login_user(email, password):
     user = db.session.get(User, db.session.query(User.id).filter_by(email=email).scalar())
     if user and bcrypt.check_password_hash(user.password, password):
         token = jwt.encode({'user_id': user.id, 'role': 'user', 'exp': datetime.utcnow() + timedelta(hours=24)}, app.config['SECRET_KEY'], algorithm='HS256')
+        return {'token': token}, 200
+    banker = db.session.get(Banker, db.session.query(Banker.id).filter_by(email=email).scalar())
+    if banker and bcrypt.check_password_hash(banker.password, password):
+        token = jwt.encode({'banker_id': banker.id, 'role': 'banker', 'exp': datetime.utcnow() + timedelta(hours=24)}, app.config['SECRET_KEY'], algorithm='HS256')
         return {'token': token}, 200
     return {'error': 'Invalid credentials'}, 401
 
